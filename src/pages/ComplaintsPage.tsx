@@ -1,772 +1,438 @@
-// pages/ComplaintsPage.tsx
-import React, { useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { mockFeedbackData } from "@/data/mockData";
-import { FeedbackEntry } from "@/types/dashboard";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertTriangle, Clock, CheckCircle, XCircle, Search } from 'lucide-react';
+import { UnifiedFilter } from '@/components/filters/UnifiedFilter';
+import { LocationFilters } from '@/types/locations';
 
-/* -------------------------------------------------------------------------- */
-/*                             1) CSV (แก้ตรงนี้ได้)                           */
-/* -------------------------------------------------------------------------- */
-/** วาง CSV ทั้งก้อนของคุณแทนที่ตัวแปรนี้ได้เลย
- *  รูปแบบคอลัมน์: ภาค\tเขต\tหน่วยให้บริการ
- *  (คั่นด้วย tab \t หรือจะใช้เครื่องหมายจุลภาคแล้วเปลี่ยนตัว split ด้านล่างก็ได้)
- */
-const CSV_TEXT = `ภาค\tเขต\tหน่วยให้บริการ
-ภาค 1\tบางเขน\tบางเขน
-ภาค 1\tราชวัตร\tนางเลิ้ง
-ภาค 1\tสะพานใหม่\tดอนเมือง
-ภาค 1\tห้วยขวาง\tพญาไท
-ภาค 10\tนครพนม\tนครพนม
-ภาค 10\tสกลนคร\tสกลนคร
-ภาค 10\tหนองคาย\tหนองคาย
-ภาค 11\tขอนแก่น 1\tขอนแก่น
-ภาค 11\tชัยภูมิ\tชัยภูมิ
-ภาค 12\tอุบลราชธานี 1\tอุบลราชธานี
-ภาค 13\tนครราชสีมา 1\tนครราชสีมา
-ภาค 13\tสระแก้ว\tสระแก้ว
-ภาค 14\tปทุมธานี 1\tปทุมธานี
-ภาค 14\tพระนครศรีอยุธยา 2\tพระนครศรีอยุธยา
-ภาค 15\tชลบุรี 1\tชลบุรี
-ภาค 15\tระยอง\tระยอง
-ภาค 16\tภูเก็ต\tภูเก็ต
-ภาค 16\tสุราษฎร์ธานี 1\tสุราษฎร์ธานี
-ภาค 17\tนครศรีธรรมราช 1\tนครศรีธรรมราช
-ภาค 17\tตรัง\tตรัง
-ภาค 18\tสงขลา 2\tหาดใหญ่
-ภาค 18\tนราธิวาส\tนราธิวาส
-`;
+interface Complaint {
+  id: string;
+  branch: string;
+  district: string;
+  province: string;
+  region: string;
+  customerName: string;
+  complainType: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  status: 'pending' | 'investigating' | 'resolved' | 'closed';
+  reportDate: string;
+  lastUpdate: string;
+  assignedTo?: string;
+  priority: number;
+}
 
-/* parser CSV (tab-separated) -> Array<{region,district,branch}> */
-type CsvRow = { region: string; district: string; branch: string };
-function parseBranchCSV(txt: string): CsvRow[] {
-  if (!txt?.trim()) return [];
-  const lines = txt.trim().split(/\r?\n/);
-  // ตัดหัวตารางออกถ้าดูเหมือน header
-  const startIdx =
-    /ภาค\s*[\t,]\s*เขต\s*[\t,]\s*(หน่วยให้บริการ|สาขา)/.test(lines[0]) ? 1 : 0;
+// Generate mock complaints data
+const generateMockComplaints = (filters: LocationFilters): Complaint[] => {
+  const complaints: Complaint[] = [];
+  const complainTypes = [
+    'การให้บริการล่าช้า',
+    'พนักงานไม่สุภาพ', 
+    'ปัญหาระบบคอมพิวเตอร์',
+    'การหลอกลวง',
+    'การบริการไม่เป็นธรรม',
+    'ปัญหาด้านความปลอดภัย',
+    'การเลือกปฏิบัติ',
+    'ผลิตภัณฑ์ไม่ตรงตามคำโฆษณา'
+  ];
+  const statuses: Complaint['status'][] = ['pending', 'investigating', 'resolved', 'closed'];
+  const severities: Complaint['severity'][] = ['low', 'medium', 'high', 'critical'];
 
-  const rows: CsvRow[] = [];
-  for (let i = startIdx; i < lines.length; i++) {
-    const raw = lines[i].trim();
-    if (!raw) continue;
-    // รองรับทั้ง tab และ comma
-    const parts = raw.split(/\t|,/).map((s) => s.trim());
-    if (parts.length < 3) continue;
-    rows.push({ region: parts[0], district: parts[1], branch: parts[2] });
+  for (let i = 0; i < 30; i++) {
+    complaints.push({
+      id: `complaint_${i + 1}`,
+      branch: `หน่วยบริการ ${i + 1}`,
+      district: `เขต ${Math.floor(i / 5) + 1}`,
+      province: `จังหวัด ${Math.floor(i / 10) + 1}`,
+      region: `ภาค ${Math.floor(i / 15) + 1}`,
+      customerName: `ลูกค้า ${i + 1}`,
+      complainType: complainTypes[i % complainTypes.length],
+      description: `รายละเอียดการร้องเรียนที่ ${i + 1} เกี่ยวกับปัญหาในการให้บริการ`,
+      severity: severities[i % severities.length],
+      status: statuses[i % statuses.length],
+      reportDate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString('th-TH'),
+      lastUpdate: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString('th-TH'),
+      assignedTo: i % 3 === 0 ? `เจ้าหน้าที่ ${i + 1}` : undefined,
+      priority: Math.floor(Math.random() * 5) + 1
+    });
   }
-  return rows;
-}
 
-/** index สำหรับดึงรายการตามลำดับ ภาค -> เขต -> สาขา */
-function buildBranchIndex(rows: CsvRow[]) {
-  const regionSet = new Set<string>();
-  const districtByRegion = new Map<string, Set<string>>();
-  const branchByRegionDistrict = new Map<string, Set<string>>();
-  const allBranches: CsvRow[] = [];
-
-  rows.forEach((r) => {
-    regionSet.add(r.region);
-    if (!districtByRegion.has(r.region)) districtByRegion.set(r.region, new Set());
-    districtByRegion.get(r.region)!.add(r.district);
-
-    const key = `${r.region}|||${r.district}`;
-    if (!branchByRegionDistrict.has(key))
-      branchByRegionDistrict.set(key, new Set());
-    branchByRegionDistrict.get(key)!.add(r.branch);
-
-    allBranches.push(r);
-  });
-
-  const regions = ["ทั้งหมด", ...Array.from(regionSet)];
-  const getDistricts = (region: string) => {
-    if (region === "ทั้งหมด") return ["ทั้งหมด"];
-    return ["ทั้งหมด", ...(districtByRegion.get(region) ? Array.from(districtByRegion.get(region)!) : [])];
-  };
-  const getBranches = (region: string, district: string) => {
-    if (region === "ทั้งหมด" || district === "ทั้งหมด") return ["ทั้งหมด"];
-    const key = `${region}|||${district}`;
-    return ["ทั้งหมด", ...(branchByRegionDistrict.get(key) ? Array.from(branchByRegionDistrict.get(key)!) : [])];
-  };
-
-  return { regions, getDistricts, getBranches, allBranches };
-}
-
-/* -------------------------------------------------------------------------- */
-/*                      2) Mapping mock feedback -> CSV                       */
-/* -------------------------------------------------------------------------- */
-/** เลือก CSV ให้ feedback ใช้ เพื่อให้ตัวกรองทำงานกับข้อมูล CSV ได้จริง
- *   - ถ้าชื่อสาขาใน mock ตรงกับ CSV จะจับคู่ตรง ๆ
- *   - ถ้าไม่ตรง จะวนแจกสาขาจาก CSV ตามลำดับ (เพื่อให้มีข้อมูลให้กรอง)
- */
-function attachCsvBranchToFeedback(feedback: FeedbackEntry[], csv: CsvRow[]) {
-  if (!csv.length) return feedback;
-  // map ชื่อสาขา -> แถว CSV (อย่างง่าย)
-  const mapByBranch = new Map<string, CsvRow>();
-  csv.forEach((r) => mapByBranch.set(r.branch, r));
-
-  return feedback.map((f, i) => {
-    const found = mapByBranch.get(f.branch.branch);
-    const pick = found ?? csv[i % csv.length];
-    return {
-      ...f,
-      branch: {
-        branch: pick.branch,
-        district: pick.district,
-        region: pick.region,
-      },
-    };
-  });
-}
-
-/* -------------------------------------------------------------------------- */
-/*                       (คงของเดิม) หมวด/แท็ก ข้อร้องเรียน                  */
-/* -------------------------------------------------------------------------- */
-const HEAD_CATEGORIES = [
-  { value: "all", label: "ทั้งหมด" },
-  { value: "1", label: "1. พนักงานและบุคลากร" },
-  { value: "2", label: "2. ระบบและกระบวนการให้บริการ" },
-  { value: "3", label: "3. เทคโนโลยีและดิจิทัล" },
-  { value: "4", label: "4. เงื่อนไขและผลิตภัณฑ์" },
-  { value: "5", label: "5. สภาพแวดล้อมและสิ่งอำนวยความสะดวก" },
-  { value: "6", label: "6. Market Conduct" },
-  { value: "7", label: "7. อื่นๆ" },
-] as const;
-
-const SUBCATS: Record<string, Array<{ code: string; label: string }>> = {
-  "1": [
-    { code: "1.1", label: "ความสุภาพและมารยาทของพนักงาน" },
-    { code: "1.2", label: "ความเอาใจใส่ในการให้บริการลูกค้า" },
-    { code: "1.3", label: "ความสามารถในการตอบคำถามหรือให้คำแนะนำ" },
-    { code: "1.4", label: "ความถูกต้องในการให้บริการ" },
-    { code: "1.5", label: "ความรวดเร็วในการให้บริการ" },
-    { code: "1.6", label: "ความเป็นมืออาชีพและการแก้ไขปัญหาเฉพาะหน้า" },
-    { code: "1.7", label: "ความประทับใจในการให้บริการ" },
-    { code: "1.8", label: "รปภ, แม่บ้าน" },
-  ],
-  "2": [
-    { code: "2.1", label: "ความพร้อมในการให้บริการ" },
-    { code: "2.2", label: "กระบวนการให้บริการ ความเป็นธรรมให้บริการ" },
-    { code: "2.3", label: "ระบบเรียกคิวและจัดการคิว" },
-    { code: "2.4", label: "ภาระเอกสาร" },
-  ],
-  "3": [
-    { code: "3.1", label: "ระบบ Core ของธนาคาร" },
-    { code: "3.2", label: "เครื่องออกบัตรคิว" },
-    { code: "3.3", label: "ATM ADM CDM" },
-    { code: "3.4", label: "E-KYC Scanner" },
-    { code: "3.5", label: "แอพพลิเคชัน MyMo" },
-    { code: "3.6", label: "เครื่องปรับสมุด" },
-    { code: "3.7", label: "เครื่องนับเงิน" },
-  ],
-  "4": [
-    { code: "4.1", label: "รายละเอียดผลิตภัณฑ์" },
-    { code: "4.2", label: "เงื่อนไขอนุมัติ" },
-    { code: "4.3", label: "ระยะเวลาอนุมัติ" },
-    { code: "4.4", label: "ความยืดหยุ่น" },
-    { code: "4.5", label: "ความเรียบง่ายข้อมูล" },
-  ],
-  "5": [
-    { code: "5.1", label: "ความสะอาด" },
-    { code: "5.2", label: "พื้นที่และความคับคั่ง" },
-    { code: "5.3", label: "อุณหภูมิ" },
-    { code: "5.4", label: "โต๊ะรับบริการ" },
-    { code: "5.5", label: "จุดรอรับบริการ" },
-    { code: "5.6", label: "แสง" },
-    { code: "5.7", label: "เสียง" },
-    { code: "5.8", label: "ห้องน้ำ" },
-    { code: "5.9", label: "ที่จอดรถ" },
-    { code: "5.10", label: "ป้าย-สื่อประชาสัมพันธ์" },
-    { code: "5.11", label: "สิ่งอำนวยความสะดวกอื่นๆ" },
-  ],
-  "6": [
-    { code: "6.1", label: "ไม่หลอกลวง" },
-    { code: "6.2", label: "ไม่เอาเปรียบ" },
-    { code: "6.3", label: "ไม่บังคับ" },
-    { code: "6.4", label: "ไม่รบกวน" },
-  ],
-  "7": [{ code: "7.1", label: "ความประทับใจอื่นๆ" }],
+  return complaints;
 };
 
-const LEGACY_KEY_TO_CODE: Record<string, string> = {
-  staffPoliteness: "1.1",
-  staffCare: "1.2",
-  staffConsultation: "1.3",
-  staffAccuracy: "1.4",
-  staffSpeed: "1.5",
-  staffProfessionalism: "1.6",
-  staffImpression: "1.7",
-  staffSecurity: "1.8",
-  serviceReadiness: "2.1",
-  serviceProcess: "2.2",
-  serviceQueue: "2.3",
-  serviceDocuments: "2.4",
-  techCore: "3.1",
-  techQueue: "3.2",
-  techATM: "3.3",
-  techKYC: "3.4",
-  techApp: "3.5",
-  techBookUpdate: "3.6",
-  techCashCounter: "3.7",
-  productDetails: "4.1",
-  productConditions: "4.2",
-  productApprovalTime: "4.3",
-  productFlexibility: "4.4",
-  productSimplicity: "4.5",
-  envCleanliness: "5.1",
-  envSpace: "5.2",
-  envTemperature: "5.3",
-  envDesk: "5.4",
-  envWaitingArea: "5.5",
-  envLighting: "5.6",
-  envSound: "5.7",
-  envRestroom: "5.8",
-  envParking: "5.9",
-  envSignage: "5.10",
-  envOtherFacilities: "5.11",
-  conductNoDeception: "6.1",
-  conductNoAdvantage: "6.2",
-  conductNoForcing: "6.3",
-  conductNoDisturbance: "6.4",
-  otherImpression: "7.1",
-};
+export const ComplaintsPage: React.FC = () => {
+  const [locationFilters, setLocationFilters] = useState<LocationFilters>({
+    regionId: "all",
+    provinceId: "all",
+    districtId: "all",
+    branchId: "all"
+  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSeverity, setSelectedSeverity] = useState<'all' | Complaint['severity']>('all');
 
-const LABEL_BY_CODE = Object.fromEntries(
-  Object.values(SUBCATS).flat().map((x) => [x.code, x.label])
-);
+  const complaintsData = generateMockComplaints(locationFilters);
 
-function pickTagCodes(f: FeedbackEntry): string[] {
-  const detailed = (f as any).detailedSentiment as
-    | Record<string, number>
-    | undefined;
-  if (!detailed) return [];
-  const codes: string[] = [];
-  for (const [k, v] of Object.entries(detailed)) {
-    if (v === -1 && LEGACY_KEY_TO_CODE[k]) codes.push(LEGACY_KEY_TO_CODE[k]);
-  }
-  return Array.from(new Set(codes));
-}
+  const handleLocationFiltersChange = (filters: LocationFilters) => {
+    setLocationFilters(filters);
+  };
 
-const serviceTypeOptions = [
-  "ทั้งหมด",
-  "การฝากเงิน/ถอนเงิน",
-  "การซื้อผลิตภัณฑ์",
-  "การชำระค่าบริการ/ค่าธรรมเนียม",
-  "อื่นๆ",
-];
+  const filteredComplaints = complaintsData.filter(complaint => {
+    const matchesSearch = searchTerm === '' || 
+      complaint.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.complainType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      complaint.branch.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesSeverity = selectedSeverity === 'all' || complaint.severity === selectedSeverity;
+    
+    return matchesSearch && matchesSeverity;
+  });
 
-type TimeType = "all" | "monthly" | "back" | "custom";
-const backRanges = [
-  { value: "7d", label: "7 วัน", ms: 7 * 24 * 60 * 60 * 1000 },
-  { value: "14d", label: "14 วัน", ms: 14 * 24 * 60 * 60 * 1000 },
-  { value: "1m", label: "1 เดือน", ms: 30 * 24 * 60 * 60 * 1000 },
-  { value: "3m", label: "3 เดือน", ms: 90 * 24 * 60 * 60 * 1000 },
-  { value: "6m", label: "6 เดือน", ms: 180 * 24 * 60 * 60 * 1000 },
-  { value: "1y", label: "1 ปี", ms: 365 * 24 * 60 * 60 * 1000 },
-];
-
-/* --------------------------------- Page ---------------------------------- */
-export default function ComplaintsPage() {
-  /* ---------- ใช้ CSV ทำ index + ผูก CSV ให้กับ mockFeedbackData ---------- */
-  const csvRows = useMemo(() => parseBranchCSV(CSV_TEXT), []);
-  const idx = useMemo(() => buildBranchIndex(csvRows), [csvRows]);
-  const data = useMemo(
-    () => attachCsvBranchToFeedback(mockFeedbackData, csvRows),
-    [csvRows]
-  );
-
-  /* ---------------------------- header dropdowns ---------------------------- */
-  // ภาค
-  const regions = idx.regions;
-  const [region, setRegion] = useState<string>("ทั้งหมด");
-
-  // เขต (ขึ้นกับภาค)
-  const districts = useMemo(() => idx.getDistricts(region), [idx, region]);
-  const [district, setDistrict] = useState<string>("ทั้งหมด");
-
-  // สาขา (ขึ้นกับภาค + เขต)
-  const branches = useMemo(
-    () => idx.getBranches(region, district),
-    [idx, region, district]
-  );
-  const [branch, setBranch] = useState<string>("ทั้งหมด");
-
-  // เวลา
-  const [timeType, setTimeType] = useState<TimeType>("all");
-  const [monthKey, setMonthKey] = useState<string>("");
-  const [backKey, setBackKey] = useState<string>("1m");
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-
-  // ประเภท/ทัศนคติ
-  const [serviceType, setServiceType] = useState("ทั้งหมด");
-  const [sentiment, setSentiment] = useState<"all" | "positive" | "negative">(
-    "all"
-  );
-
-  // หมวด
-  const [headCat, setHeadCat] =
-    useState<(typeof HEAD_CATEGORIES)[number]["value"]>("all");
-  const subcatList = useMemo(
-    () => (headCat === "all" ? [] : SUBCATS[headCat] ?? []),
-    [headCat]
-  );
-  const [subCat, setSubCat] = useState<string>("all");
-
-  /* --------------------------------- time --------------------------------- */
-  const monthOptions = useMemo(() => {
-    const today = new Date();
-    const list: { key: string; label: string }[] = [];
-    for (let i = 0; i < 18; i++) {
-      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const th = d.toLocaleDateString("th-TH", { year: "2-digit", month: "long" });
-      list.push({ key, label: th });
+  const getSeverityColor = (severity: Complaint['severity']) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-    return list;
-  }, []);
+  };
 
-  function parseDate(s: string): Date | null {
-    if (!s) return null;
-    if (s.includes("-")) return new Date(s);
-    if (s.includes("/")) {
-      const [dd, mm, yyyy] = s.split("/");
-      return new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, parseInt(dd, 10));
+  const getSeverityLabel = (severity: Complaint['severity']) => {
+    switch (severity) {
+      case 'critical': return 'วิกฤต';
+      case 'high': return 'สูง';
+      case 'medium': return 'กลาง';
+      case 'low': return 'ต่ำ';
+      default: return 'ไม่ระบุ';
     }
-    return new Date(s);
-  }
+  };
 
-  function inTimeRange(dateStr: string): boolean {
-    if (timeType === "all") return true;
-    const d = parseDate(dateStr);
-    if (!d) return true;
-
-    if (timeType === "monthly" && monthKey) {
-      const [y, m] = monthKey.split("-").map((x) => parseInt(x, 10));
-      const start = new Date(y, m - 1, 1).getTime();
-      const end = new Date(y, m, 0, 23, 59, 59, 999).getTime();
-      return d.getTime() >= start && d.getTime() <= end;
+  const getStatusColor = (status: Complaint['status']) => {
+    switch (status) {
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'investigating': return 'bg-blue-100 text-blue-800';
+      case 'resolved': return 'bg-green-100 text-green-800';
+      case 'closed': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-    if (timeType === "back") {
-      const item = backRanges.find((x) => x.value === backKey) ?? backRanges[2];
-      const start = Date.now() - item.ms;
-      return d.getTime() >= start;
+  };
+
+  const getStatusLabel = (status: Complaint['status']) => {
+    switch (status) {
+      case 'pending': return 'รอดำเนินการ';
+      case 'investigating': return 'กำลังตรวจสอบ';
+      case 'resolved': return 'แก้ไขแล้ว';
+      case 'closed': return 'ปิดเรื่อง';
+      default: return 'ไม่ทราบสถานะ';
     }
-    if (timeType === "custom" && startDate && endDate) {
-      const s = parseDate(startDate)?.getTime() ?? 0;
-      const e = parseDate(endDate)?.getTime() ?? Date.now();
-      return d.getTime() >= s && d.getTime() <= e;
+  };
+
+  const getStatusIcon = (status: Complaint['status']) => {
+    switch (status) {
+      case 'pending': return <Clock className="w-4 h-4" />;
+      case 'investigating': return <AlertTriangle className="w-4 h-4" />;
+      case 'resolved': return <CheckCircle className="w-4 h-4" />;
+      case 'closed': return <XCircle className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
     }
-    return true;
-  }
+  };
 
-  /* ------------------------------- filtering ------------------------------- */
-  const filtered = useMemo(() => {
-    return data
-      .filter((f) => {
-        if (region !== "ทั้งหมด" && f.branch.region !== region) return false;
-        if (district !== "ทั้งหมด" && f.branch.district !== district) return false;
-        if (branch !== "ทั้งหมด" && f.branch.branch !== branch) return false;
+  const statusCounts = {
+    all: complaintsData.length,
+    pending: complaintsData.filter(c => c.status === 'pending').length,
+    investigating: complaintsData.filter(c => c.status === 'investigating').length,
+    resolved: complaintsData.filter(c => c.status === 'resolved').length,
+    closed: complaintsData.filter(c => c.status === 'closed').length,
+  };
 
-        if (serviceType !== "ทั้งหมด" && f.serviceType !== serviceType) return false;
+  const severityCounts = {
+    critical: complaintsData.filter(c => c.severity === 'critical').length,
+    high: complaintsData.filter(c => c.severity === 'high').length,
+    medium: complaintsData.filter(c => c.severity === 'medium').length,
+    low: complaintsData.filter(c => c.severity === 'low').length,
+  };
 
-        if (sentiment !== "all") {
-          const list = Object.values(f.sentiment);
-          const hasPos = list.some((v) => v === 1);
-          const hasNeg = list.some((v) => v === -1);
-          if (sentiment === "positive" && !hasPos) return false;
-          if (sentiment === "negative" && !hasNeg) return false;
-        }
-
-        if (!inTimeRange(f.date)) return false;
-
-        if (headCat !== "all") {
-          const codes = pickTagCodes(f);
-          if (!codes.some((c) => c.startsWith(headCat + "."))) return false;
-          if (subCat !== "all" && !codes.includes(subCat)) return false;
-        }
-        return true;
-      })
-      .sort(
-        (a, b) =>
-          (parseDate(b.date)?.getTime() ?? 0) -
-          (parseDate(a.date)?.getTime() ?? 0)
-      );
-  }, [
-    data,
-    region,
-    district,
-    branch,
-    serviceType,
-    sentiment,
-    timeType,
-    monthKey,
-    backKey,
-    startDate,
-    endDate,
-    headCat,
-    subCat,
-  ]);
-
-  function resetAll() {
-    setRegion("ทั้งหมด");
-    setDistrict("ทั้งหมด");
-    setBranch("ทั้งหมด");
-    setTimeType("all");
-    setMonthKey("");
-    setBackKey("1m");
-    setStartDate("");
-    setEndDate("");
-    setServiceType("ทั้งหมด");
-    setSentiment("all");
-    setHeadCat("all");
-    setSubCat("all");
-  }
-
-  /* --------------------------------- UI ---------------------------------- */
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">ข้อร้องเรียนลูกค้า</h1>
-        <p className="text-muted-foreground">ระบบสรุปข้อร้องเรียนสำคัญจากลูกค้า</p>
-      </div>
+      <div className="flex flex-col space-y-4">
+        <h1 className="text-2xl font-bold text-foreground">
+          ระบบจัดการการร้องเรียน
+        </h1>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-xl">ตัวกรอง</CardTitle>
-          <Button variant="outline" onClick={resetAll}>
-            ล้างตัวกรอง
-          </Button>
-        </CardHeader>
+        {/* Location Filter */}
+        <UnifiedFilter
+          filters={locationFilters}
+          onFiltersChange={handleLocationFiltersChange}
+          options={{
+            showRegion: true,
+            showProvince: true,
+            showDistrict: true,
+            showBranch: true,
+            regionLabel: "ภาค",
+            provinceLabel: "จังหวัด",
+            districtLabel: "เขต",
+            branchLabel: "หน่วยให้บริการ"
+          }}
+          title="เลือกพื้นที่"
+        />
 
-        <CardContent className="space-y-6">
-          {/* พื้นที่ให้บริการ */}
-          <section>
-            <div className="mb-3 text-lg font-semibold">พื้นที่</div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {/* Region */}
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">ภาค</label>
-                <Select
-                  key={`region-${region}`}
-                  value={region}
-                  onValueChange={(v) => {
-                    setRegion(v);
-                    setDistrict("ทั้งหมด");
-                    setBranch("ทั้งหมด");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกภาค" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {regions.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* District */}
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">เขต</label>
-                <Select
-                  key={`district-${region}-${district}`}
-                  value={district}
-                  onValueChange={(v) => {
-                    setDistrict(v);
-                    setBranch("ทั้งหมด");
-                  }}
-                  disabled={region === "ทั้งหมด"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกเขต" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {districts.map((d) => (
-                      <SelectItem key={d} value={d}>
-                        {d}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Branch */}
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">หน่วยให้บริการ</label>
-                <Select
-                  key={`branch-${region}-${district}-${branch}`}
-                  value={branch}
-                  onValueChange={setBranch}
-                  disabled={region === "ทั้งหมด" || district === "ทั้งหมด"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกหน่วยให้บริการ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b} value={b}>
-                        {b}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </section>
-
-          {/* ช่วงเวลาการประเมิน */}
-          <section>
-            <div className="mb-3 text-lg font-semibold">ช่วงเวลาการประเมิน</div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">ประเภท</label>
-                <Select value={timeType} onValueChange={(v: TimeType) => setTimeType(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกประเภทเวลา" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">ทั้งหมด</SelectItem>
-                    <SelectItem value="monthly">รายเดือน</SelectItem>
-                    <SelectItem value="back">ช่วงเวลาย้อนหลัง</SelectItem>
-                    <SelectItem value="custom">กำหนดเอง</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {timeType === "monthly" && (
-                <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">เดือน</label>
-                  <Select value={monthKey} onValueChange={setMonthKey}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="เลือกเดือน" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {monthOptions.map((m) => (
-                        <SelectItem key={m.key} value={m.key}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {timeType === "back" && (
-                <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">ย้อนหลัง</label>
-                  <Select value={backKey} onValueChange={setBackKey}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="เลือกช่วงเวลา" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {backRanges.map((r) => (
-                        <SelectItem key={r.value} value={r.value}>
-                          {r.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {timeType === "custom" && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm text-muted-foreground">เริ่ม</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm text-muted-foreground">สิ้นสุด</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </section>
-
-          {/* ประเภทการให้บริการและทัศนคติ */}
-          <section>
-            <div className="mb-3 text-lg font-semibold">
-              ประเภทการให้บริการ และทัศนคติ
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">บริการ</label>
-                <Select value={serviceType} onValueChange={setServiceType}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกประเภทบริการ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {serviceTypeOptions.map((x) => (
-                      <SelectItem key={x} value={x}>
-                        {x}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">ทัศนคติ</label>
-                <Select
-                  value={sentiment}
-                  onValueChange={(v: any) => setSentiment(v)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกทัศนคติ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">ทั้งหมด</SelectItem>
-                    <SelectItem value="positive">เชิงบวก</SelectItem>
-                    <SelectItem value="negative">เชิงลบ</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </section>
-
-          {/* ประเภท / หมวดหมู่ ความคิดเห็น */}
-          <section>
-            <div className="mb-3 text-lg font-semibold">
-              ประเภท / หมวดหมู่ ความคิดเห็น
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">หัวข้อ</label>
-                <Select
-                  value={headCat}
-                  onValueChange={(v: any) => {
-                    setHeadCat(v);
-                    setSubCat("all");
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกหัวข้อการประเมิน" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {HEAD_CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value as string}>
-                        {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">หมวดหมู่</label>
-                <Select
-                  value={subCat}
-                  onValueChange={setSubCat}
-                  disabled={headCat === "all"}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="เลือกหมวดย่อย" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">ทั้งหมด</SelectItem>
-                    {subcatList.map((x) => (
-                      <SelectItem key={x.code} value={x.code}>
-                        {x.code} {x.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </section>
-        </CardContent>
-      </Card>
-
-      {/* Results */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">
-          ผลการค้นหา{" "}
-          <span className="text-muted-foreground">({filtered.length} รายการ)</span>
-        </h2>
-      </div>
-
-      <div className="space-y-4">
-        {filtered.map((f) => {
-          const codes = pickTagCodes(f);
-          const severe =
-            Object.values(f.sentiment).some((v) => v === -1) ||
-            f.satisfaction.overall <= 2;
-
-          return (
-            <Card
-              key={f.id}
-              className={
-                severe ? "border-red-200 bg-rose-50" : "border-border bg-background"
-              }
+        {/* Search and Filter Controls */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              placeholder="ค้นหาการร้องเรียน, ชื่อลูกค้า, ประเภท หรือสาขา..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={selectedSeverity === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedSeverity('all')}
             >
-              <CardContent className="p-4">
-                <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                  <span>
-                    <strong>รหัส:</strong> {f.id}
-                  </span>
-                  <span>
-                    <strong>วันที่:</strong> {f.date} {f.timestamp}
-                  </span>
-                  <span>
-                    <strong>พื้นที่:</strong> {f.branch.region} / {f.branch.district} /{" "}
-                    {f.branch.branch}
-                  </span>
-                  <span>
-                    <strong>บริการ:</strong> {f.serviceType}
-                  </span>
-                </div>
+              ทั้งหมด
+            </Button>
+            <Button
+              variant={selectedSeverity === 'critical' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedSeverity('critical')}
+            >
+              วิกฤต ({severityCounts.critical})
+            </Button>
+            <Button
+              variant={selectedSeverity === 'high' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedSeverity('high')}
+            >
+              สูง ({severityCounts.high})
+            </Button>
+            <Button
+              variant={selectedSeverity === 'medium' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedSeverity('medium')}
+            >
+              กลาง ({severityCounts.medium})
+            </Button>
+            <Button
+              variant={selectedSeverity === 'low' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedSeverity('low')}
+            >
+              ต่ำ ({severityCounts.low})
+            </Button>
+          </div>
+        </div>
+      </div>
 
-                <p className="mb-3 leading-relaxed text-foreground">{f.comment}</p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">ทั้งหมด</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{statusCounts.all}</div>
+            <p className="text-xs text-muted-foreground">การร้องเรียน</p>
+          </CardContent>
+        </Card>
 
-                {codes.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {codes.map((c) => (
-                      <Badge
-                        key={c}
-                        variant={severe ? "destructive" : "secondary"}
-                        className="text-xs"
-                      >
-                        {c} {LABEL_BY_CODE[c] ?? ""}
-                      </Badge>
-                    ))}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-600">รอดำเนินการ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</div>
+            <p className="text-xs text-muted-foreground">เรื่อง</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-600">กำลังตรวจสอบ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{statusCounts.investigating}</div>
+            <p className="text-xs text-muted-foreground">เรื่อง</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-600">แก้ไขแล้ว</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{statusCounts.resolved}</div>
+            <p className="text-xs text-muted-foreground">เรื่อง</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">ปิดเรื่อง</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-600">{statusCounts.closed}</div>
+            <p className="text-xs text-muted-foreground">เรื่อง</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Complaints List */}
+      <Tabs defaultValue="all" className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="all">ทั้งหมด ({statusCounts.all})</TabsTrigger>
+          <TabsTrigger value="pending">รอดำเนินการ ({statusCounts.pending})</TabsTrigger>
+          <TabsTrigger value="investigating">กำลังตรวจสอบ ({statusCounts.investigating})</TabsTrigger>
+          <TabsTrigger value="resolved">แก้ไขแล้ว ({statusCounts.resolved})</TabsTrigger>
+          <TabsTrigger value="closed">ปิดเรื่อง ({statusCounts.closed})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium">
+              ผลการค้นหา ({filteredComplaints.length} รายการ)
+            </h3>
+          </div>
+
+          {filteredComplaints.map((complaint) => (
+            <Card key={complaint.id}>
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-base font-medium">
+                      {complaint.complainType} - {complaint.branch}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      {complaint.district}, {complaint.province}, {complaint.region}
+                    </p>
                   </div>
-                )}
+                  <div className="flex gap-2">
+                    <Badge className={getSeverityColor(complaint.severity)}>
+                      {getSeverityLabel(complaint.severity)}
+                    </Badge>
+                    <Badge className={getStatusColor(complaint.status)}>
+                      <div className="flex items-center gap-1">
+                        {getStatusIcon(complaint.status)}
+                        {getStatusLabel(complaint.status)}
+                      </div>
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <p className="text-sm">
+                    <span className="font-medium">ลูกค้า:</span> {complaint.customerName}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">รายละเอียด:</span> {complaint.description}
+                  </p>
+                  {complaint.assignedTo && (
+                    <p className="text-sm">
+                      <span className="font-medium">ผู้รับผิดชอบ:</span> {complaint.assignedTo}
+                    </p>
+                  )}
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>รายงานเมื่อ: {complaint.reportDate}</span>
+                    <span>อัปเดตล่าสุด: {complaint.lastUpdate}</span>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button size="sm" variant="outline">
+                      ดูรายละเอียด
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      อัปเดตสถานะ
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      ตอบกลับ
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
-          );
-        })}
+          ))}
 
-        {filtered.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              ไม่พบข้อมูลที่ตรงกับตัวกรอง
-            </CardContent>
-          </Card>
-        )}
-      </div>
+          {filteredComplaints.length === 0 && (
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-muted-foreground">ไม่พบการร้องเรียนที่ตรงกับการค้นหา</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {['pending', 'investigating', 'resolved', 'closed'].map((status) => (
+          <TabsContent key={status} value={status} className="space-y-4">
+            {filteredComplaints
+              .filter((complaint) => complaint.status === status)
+              .map((complaint) => (
+                <Card key={complaint.id}>
+                  
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-base font-medium">
+                          {complaint.complainType} - {complaint.branch}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {complaint.district}, {complaint.province}, {complaint.region}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Badge className={getSeverityColor(complaint.severity)}>
+                          {getSeverityLabel(complaint.severity)}
+                        </Badge>
+                        <Badge className={getStatusColor(complaint.status)}>
+                          <div className="flex items-center gap-1">
+                            {getStatusIcon(complaint.status)}
+                            {getStatusLabel(complaint.status)}
+                          </div>
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <p className="text-sm">
+                        <span className="font-medium">ลูกค้า:</span> {complaint.customerName}
+                      </p>
+                      <p className="text-sm">
+                        <span className="font-medium">รายละเอียด:</span> {complaint.description}
+                      </p>
+                      {complaint.assignedTo && (
+                        <p className="text-sm">
+                          <span className="font-medium">ผู้รับผิดชอบ:</span> {complaint.assignedTo}
+                        </p>
+                      )}
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>รายงานเมื่อ: {complaint.reportDate}</span>
+                        <span>อัปเดตล่าสุด: {complaint.lastUpdate}</span>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button size="sm" variant="outline">
+                          ดูรายละเอียด
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          อัปเดตสถานะ
+                        </Button>
+                        <Button size="sm" variant="outline">
+                          ตอบกลับ
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
-}
+};

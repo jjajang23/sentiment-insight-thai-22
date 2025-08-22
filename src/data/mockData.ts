@@ -1,51 +1,41 @@
-// src/data/mockData.ts
-import { FeedbackEntry, KPIData, RegionData, ChartData } from "@/types/dashboard";
 
-// Generate mock data for dashboard
-export const generateMockFeedback = (count: number = 1000): FeedbackEntry[] => {
-  const branches = [
-    "สำนักงานใหญ่", "สาขาสีลม", "สาขาแจ้งวัฒนะ", "สาขาลาดพร้าว", "สาขาบางนา",
-    "สาขาเชียงใหม่", "สาขาหาดใหญ่", "สาขาขอนแก่น", "สาขานครราชสีมา", "สาขาอุบลราชธานี"
-  ];
+import { FeedbackEntry, KPIData, ChartData, RegionData } from '@/types/dashboard';
+import { getLocationData } from '@/utils/locationDataManager';
+
+export interface SentimentItem {
+  label: string;
+  value: number;
+  color: string;
+}
+
+// Generate mock data using location data from CSV
+const generateMockDataWithLocations = async () => {
+  const locationData = await getLocationData();
   
-  const districts = [
-    "กรุงเทพฯ กลาง", "กรุงเทพฯ เหนือ", "กรุงเทพฯ ใต้", "กรุงเทพฯ ตะวันออก", "กรุงเทพฯ ตะวันตก",
-    "เหนือ 1", "เหนือ 2", "ใต้ 1", "ใต้ 2", "อีสาน 1", "อีสาน 2", "ตะวันตก", "ตะวันออก"
-  ];
+  // Generate mock feedback entries using real location data
+  const mockFeedbackEntries: FeedbackEntry[] = [];
   
-  const regions = Array.from({ length: 18 }, (_, i) => `ภาค ${i + 1}`);
-  
-  const serviceTypes = [
-    "การฝากเงิน/ถอนเงิน",
-    "การซื้อผลิตภัณฑ์", 
-    "การชำระค่าบริการ/ค่าธรรมเนียม",
-    "อื่นๆ"
-  ] as const;
+  // Use actual regions, provinces, districts, and branches from CSV
+  for (let i = 0; i < 500; i++) {
+    const randomRegion = locationData.regions[Math.floor(Math.random() * locationData.regions.length)];
+    const regionProvinces = locationData.provinces.filter(p => p.regionId === randomRegion.id);
+    const randomProvince = regionProvinces[Math.floor(Math.random() * regionProvinces.length)] || locationData.provinces[0];
+    const provinceDistricts = locationData.districts.filter(d => d.provinceId === randomProvince.id);
+    const randomDistrict = provinceDistricts[Math.floor(Math.random() * provinceDistricts.length)] || locationData.districts[0];
+    const districtBranches = locationData.branches.filter(b => b.districtId === randomDistrict.id);
+    const randomBranch = districtBranches[Math.floor(Math.random() * districtBranches.length)] || locationData.branches[0];
 
-  const sampleComments = [
-    "พนักงานให้บริการดีมาก สุภาพและเอาใจใส่ลูกค้า เครื่อง ATM ทำงานได้ดี สะอาด",
-    "รอนาน คิวเยอะมาก พื้นที่แคบ แต่พนักงานพยายามช่วยเหลือดี",
-    "ระบบล่มบ่อย เสียเวลามาก พนักงานขออภัยแต่แก้ไขได้ไม่เร็ว สภาพแวดล้อมดี",
-    "ประทับใจการบริการมาก พนักงานมืออาชีพ อธิบายผลิตภัณฑ์ชัดเจน ที่จอดรถสะดวก",
-    "เครื่องนับเงินเสียบ่อย ต้องรอซ่อม พนักงานช่วยได้ดี แต่ใช้เวลานาน อุณหภูมิร้อน",
-    "บริการดีเยี่ยม รวดเร็ว ถูกต้อง สะอาด สะดวก แนะนำเพื่อน MyMo App ใช้ง่าย",
-    "ห้องน้ำสกปรก พื้นที่รอคับแคบ แต่พนักงานใจดี ช่วยเหลือดี บริการเร็ว",
-    "ระบบ Core ช้า ทำธุรกรรมนาน พนักงานอธิบายดี รอคิวนาน สิ่งอำนวยความสะดวกครบ"
-  ];
-
-  const mockData: FeedbackEntry[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const date = new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000);
-    const branch = branches[Math.floor(Math.random() * branches.length)];
-    const district = districts[Math.floor(Math.random() * districts.length)];
-    const region = regions[Math.floor(Math.random() * regions.length)];
+    const serviceTypes = ['การฝากเงิน/ถอนเงิน', 'การซื้อผลิตภัณฑ์', 'การชำระค่าบริการ/ค่าธรรมเนียม', 'อื่นๆ'] as const;
     
-    mockData.push({
+    mockFeedbackEntries.push({
       id: `feedback_${i + 1}`,
-      timestamp: date.toLocaleTimeString('th-TH'),
-      date: date.toLocaleDateString('th-TH'),
-      branch: { branch, district, region },
+      timestamp: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toISOString(),
+      date: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString('th-TH'),
+      branch: {
+        branch: randomBranch.name,
+        district: randomDistrict.name,
+        region: randomRegion.name
+      },
       serviceType: serviceTypes[Math.floor(Math.random() * serviceTypes.length)],
       satisfaction: {
         care: Math.floor(Math.random() * 5) + 1,
@@ -54,9 +44,9 @@ export const generateMockFeedback = (count: number = 1000): FeedbackEntry[] => {
         accuracy: Math.floor(Math.random() * 5) + 1,
         equipment: Math.floor(Math.random() * 5) + 1,
         environment: Math.floor(Math.random() * 5) + 1,
-        overall: Math.floor(Math.random() * 5) + 1,
+        overall: Math.floor(Math.random() * 5) + 1
       },
-      comment: sampleComments[Math.floor(Math.random() * sampleComments.length)],
+      comment: `ความคิดเห็นตัวอย่างที่ ${i + 1} เกี่ยวกับการบริการ`,
       sentiment: {
         staff: Math.floor(Math.random() * 3) - 1,
         service: Math.floor(Math.random() * 3) - 1,
@@ -64,7 +54,7 @@ export const generateMockFeedback = (count: number = 1000): FeedbackEntry[] => {
         products: Math.floor(Math.random() * 3) - 1,
         environment: Math.floor(Math.random() * 3) - 1,
         marketConduct: Math.floor(Math.random() * 3) - 1,
-        other: Math.floor(Math.random() * 3) - 1,
+        other: Math.floor(Math.random() * 3) - 1
       },
       detailedSentiment: {
         staffPoliteness: Math.floor(Math.random() * 3) - 1,
@@ -75,12 +65,10 @@ export const generateMockFeedback = (count: number = 1000): FeedbackEntry[] => {
         staffProfessionalism: Math.floor(Math.random() * 3) - 1,
         staffImpression: Math.floor(Math.random() * 3) - 1,
         staffSecurity: Math.floor(Math.random() * 3) - 1,
-        
         serviceReadiness: Math.floor(Math.random() * 3) - 1,
         serviceProcess: Math.floor(Math.random() * 3) - 1,
         serviceQueue: Math.floor(Math.random() * 3) - 1,
         serviceDocuments: Math.floor(Math.random() * 3) - 1,
-        
         techCore: Math.floor(Math.random() * 3) - 1,
         techQueue: Math.floor(Math.random() * 3) - 1,
         techATM: Math.floor(Math.random() * 3) - 1,
@@ -88,13 +76,11 @@ export const generateMockFeedback = (count: number = 1000): FeedbackEntry[] => {
         techApp: Math.floor(Math.random() * 3) - 1,
         techBookUpdate: Math.floor(Math.random() * 3) - 1,
         techCashCounter: Math.floor(Math.random() * 3) - 1,
-        
         productDetails: Math.floor(Math.random() * 3) - 1,
         productConditions: Math.floor(Math.random() * 3) - 1,
         productApprovalTime: Math.floor(Math.random() * 3) - 1,
         productFlexibility: Math.floor(Math.random() * 3) - 1,
         productSimplicity: Math.floor(Math.random() * 3) - 1,
-        
         envCleanliness: Math.floor(Math.random() * 3) - 1,
         envSpace: Math.floor(Math.random() * 3) - 1,
         envTemperature: Math.floor(Math.random() * 3) - 1,
@@ -106,107 +92,194 @@ export const generateMockFeedback = (count: number = 1000): FeedbackEntry[] => {
         envParking: Math.floor(Math.random() * 3) - 1,
         envSignage: Math.floor(Math.random() * 3) - 1,
         envOtherFacilities: Math.floor(Math.random() * 3) - 1,
-        
         conductNoDeception: Math.floor(Math.random() * 3) - 1,
         conductNoAdvantage: Math.floor(Math.random() * 3) - 1,
         conductNoForcing: Math.floor(Math.random() * 3) - 1,
         conductNoDisturbance: Math.floor(Math.random() * 3) - 1,
-        
-        otherImpression: Math.floor(Math.random() * 3) - 1,
+        otherImpression: Math.floor(Math.random() * 3) - 1
       }
     });
   }
 
-  return mockData;
+  return mockFeedbackEntries;
 };
 
-export const mockFeedbackData = generateMockFeedback(1000);
+// Initialize mock data
+let mockFeedbackEntries: FeedbackEntry[] = [];
 
-export const getKPIData = (): KPIData => {
-  const total = mockFeedbackData.length;
-  const withComments = mockFeedbackData.filter(f => f.comment.length > 10).length;
-  const severeComplaints = mockFeedbackData.filter(f => 
-    Object.values(f.sentiment).some(v => v === -1) ||
-    f.satisfaction.overall <= 2
-  ).length;
-  const withContact = Math.floor(total * 0.23); // Mock contact data
+// Load mock data
+generateMockDataWithLocations().then(data => {
+  mockFeedbackEntries = data;
+}).catch(error => {
+  console.error('Failed to generate mock data with locations:', error);
+  // Fallback to basic mock data if location data fails
+  mockFeedbackEntries = Array.from({ length: 500 }, (_, i) => ({
+    id: `feedback_${i + 1}`,
+    timestamp: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toISOString(),
+    date: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString('th-TH'),
+    branch: {
+      branch: `หน่วยบริการ ${i + 1}`,
+      district: `เขต ${Math.floor(i / 10) + 1}`,
+      region: `ภาค ${Math.floor(i / 50) + 1}`
+    },
+    serviceType: ['การฝากเงิน/ถอนเงิน', 'การซื้อผลิตภัณฑ์', 'การชำระค่าบริการ/ค่าธรรมเนียม', 'อื่นๆ'][Math.floor(Math.random() * 4)] as any,
+    satisfaction: {
+      care: Math.floor(Math.random() * 5) + 1,
+      consultation: Math.floor(Math.random() * 5) + 1,
+      speed: Math.floor(Math.random() * 5) + 1,
+      accuracy: Math.floor(Math.random() * 5) + 1,
+      equipment: Math.floor(Math.random() * 5) + 1,
+      environment: Math.floor(Math.random() * 5) + 1,
+      overall: Math.floor(Math.random() * 5) + 1
+    },
+    comment: `ความคิดเห็นตัวอย่างที่ ${i + 1}`,
+    sentiment: {
+      staff: Math.floor(Math.random() * 3) - 1,
+      service: Math.floor(Math.random() * 3) - 1,
+      technology: Math.floor(Math.random() * 3) - 1,
+      products: Math.floor(Math.random() * 3) - 1,
+      environment: Math.floor(Math.random() * 3) - 1,
+      marketConduct: Math.floor(Math.random() * 3) - 1,
+      other: Math.floor(Math.random() * 3) - 1
+    },
+    detailedSentiment: {
+      staffPoliteness: Math.floor(Math.random() * 3) - 1,
+      staffCare: Math.floor(Math.random() * 3) - 1,
+      staffConsultation: Math.floor(Math.random() * 3) - 1,
+      staffAccuracy: Math.floor(Math.random() * 3) - 1,
+      staffSpeed: Math.floor(Math.random() * 3) - 1,
+      staffProfessionalism: Math.floor(Math.random() * 3) - 1,
+      staffImpression: Math.floor(Math.random() * 3) - 1,
+      staffSecurity: Math.floor(Math.random() * 3) - 1,
+      serviceReadiness: Math.floor(Math.random() * 3) - 1,
+      serviceProcess: Math.floor(Math.random() * 3) - 1,
+      serviceQueue: Math.floor(Math.random() * 3) - 1,
+      serviceDocuments: Math.floor(Math.random() * 3) - 1,
+      techCore: Math.floor(Math.random() * 3) - 1,
+      techQueue: Math.floor(Math.random() * 3) - 1,
+      techATM: Math.floor(Math.random() * 3) - 1,
+      techKYC: Math.floor(Math.random() * 3) - 1,
+      techApp: Math.floor(Math.random() * 3) - 1,
+      techBookUpdate: Math.floor(Math.random() * 3) - 1,
+      techCashCounter: Math.floor(Math.random() * 3) - 1,
+      productDetails: Math.floor(Math.random() * 3) - 1,
+      productConditions: Math.floor(Math.random() * 3) - 1,
+      productApprovalTime: Math.floor(Math.random() * 3) - 1,
+      productFlexibility: Math.floor(Math.random() * 3) - 1,
+      productSimplicity: Math.floor(Math.random() * 3) - 1,
+      envCleanliness: Math.floor(Math.random() * 3) - 1,
+      envSpace: Math.floor(Math.random() * 3) - 1,
+      envTemperature: Math.floor(Math.random() * 3) - 1,
+      envDesk: Math.floor(Math.random() * 3) - 1,
+      envWaitingArea: Math.floor(Math.random() * 3) - 1,
+      envLighting: Math.floor(Math.random() * 3) - 1,
+      envSound: Math.floor(Math.random() * 3) - 1,
+      envRestroom: Math.floor(Math.random() * 3) - 1,
+      envParking: Math.floor(Math.random() * 3) - 1,
+      envSignage: Math.floor(Math.random() * 3) - 1,
+      envOtherFacilities: Math.floor(Math.random() * 3) - 1,
+      conductNoDeception: Math.floor(Math.random() * 3) - 1,
+      conductNoAdvantage: Math.floor(Math.random() * 3) - 1,
+      conductNoForcing: Math.floor(Math.random() * 3) - 1,
+      conductNoDisturbance: Math.floor(Math.random() * 3) - 1,
+      otherImpression: Math.floor(Math.random() * 3) - 1
+    }
+  }));
+});
+
+// Export functions to get mock data
+export const getMockFeedbackEntries = (): FeedbackEntry[] => mockFeedbackEntries;
+
+export const getMockKPIData = (): KPIData => {
+  const totalFeedback = mockFeedbackEntries.length;
+  const feedbackWithComments = mockFeedbackEntries.filter(entry => entry.comment.length > 10);
+  const severeComplaints = mockFeedbackEntries.filter(entry => 
+    Object.values(entry.sentiment).some(value => value === -1)
+  );
+  const contactProvided = mockFeedbackEntries.filter(() => Math.random() > 0.7);
 
   return {
-    totalFeedback: total,
+    totalFeedback,
     feedbackWithComments: {
-      count: withComments,
-      percentage: Math.round((withComments / total) * 100)
+      count: feedbackWithComments.length,
+      percentage: Math.round((feedbackWithComments.length / totalFeedback) * 100)
     },
     severeComplaints: {
-      count: severeComplaints,
-      percentage: Math.round((severeComplaints / total) * 100)
+      count: severeComplaints.length,
+      percentage: Math.round((severeComplaints.length / totalFeedback) * 100)
     },
     contactProvided: {
-      count: withContact,
-      percentage: Math.round((withContact / total) * 100)
+      count: contactProvided.length,
+      percentage: Math.round((contactProvided.length / totalFeedbook) * 100)
     }
   };
 };
 
-export const getServiceTypeData = (): ChartData[] => {
-  const serviceTypes = ["การฝากเงิน/ถอนเงิน", "การซื้อผลิตภัณฑ์", "การชำระค่าบริการ/ค่าธรรมเนียม", "อื่นๆ"];
+export const getMockServiceTypeData = (): ChartData[] => {
+  const serviceTypes = {
+    'การฝากเงิน/ถอนเงิน': 0,
+    'การซื้อผลิตภัณฑ์': 0,  
+    'การชำระค่าบริการ/ค่าธรรมเนียม': 0,
+    'อื่นๆ': 0
+  };
+
+  mockFeedbackEntries.forEach(entry => {
+    serviceTypes[entry.serviceType]++;
+  });
+
+  const total = mockFeedbackEntries.length;
   
-  return serviceTypes.map(type => {
-    const count = mockFeedbackData.filter(f => f.serviceType === type).length;
-    return {
-      name: type,
-      value: Math.round((count / mockFeedbackData.length) * 100)
-    };
-  });
+  return Object.entries(serviceTypes).map(([name, count]) => ({
+    name,
+    value: Math.round((count / total) * 100)
+  }));
 };
 
-export const getSatisfactionData = (): ChartData[] => {
-  const categories = [
-    { key: 'care', name: 'การดูแลเอาใจใส่' },
-    { key: 'consultation', name: 'การตอบคำถามและให้คำแนะนำ' },
-    { key: 'speed', name: 'ความรวดเร็วในการให้บริการ' },
-    { key: 'accuracy', name: 'ความถูกต้องในการทำธุรกรรม' },
-    { key: 'equipment', name: 'ความพร้อมของเครื่องมือให้บริการ' },
-    { key: 'environment', name: 'สภาพแวดล้อมของสาขา' },
-    { key: 'overall', name: 'ความพึงพอใจในการเข้าใช้บริการ' }
+export const getMockSentimentData = (): SentimentItem[] => {
+  let positive = 0, negative = 0, neutral = 0;
+
+  mockFeedbackEntries.forEach(entry => {
+    const sentimentValues = Object.values(entry.sentiment);
+    const avgSentiment = sentimentValues.reduce((sum, val) => sum + val, 0) / sentimentValues.length;
+    
+    if (avgSentiment > 0.2) positive++;
+    else if (avgSentiment < -0.2) negative++;
+    else neutral++;
+  });
+
+  const total = mockFeedbackEntries.length;
+  
+  return [
+    { label: 'เชิงบวก', value: Math.round((positive / total) * 100), color: '#10B981' },
+    { label: 'เชิงลบ', value: Math.round((negative / total) * 100), color: '#EF4444' },
+    { label: 'ไม่มีนัยสำคัญ', value: Math.round((neutral / total) * 100), color: '#6B7280' }
   ];
-
-  return categories.map(cat => {
-    const scores = mockFeedbackData.map(f => f.satisfaction[cat.key as keyof typeof f.satisfaction]);
-    const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    
-    return {
-      name: cat.name,
-      value: Math.round(avgScore * 10) / 10
-    };
-  });
 };
 
-export const getRegionSatisfactionData = (): ChartData[] => {
-  return Array.from({ length: 18 }, (_, i) => {
-    const regionName = `ภาค ${i + 1}`;
-    const regionFeedback = mockFeedbackData.filter(f => f.branch.region === regionName);
-    
-    if (regionFeedback.length === 0) {
-      return { name: regionName, value: Math.random() * 2 + 3 }; // Random score 3-5
+export const getMockRegionalData = (): RegionData[] => {
+  const regionalData: { [key: string]: { positive: number; negative: number; neutral: number; total: number } } = {};
+
+  mockFeedbackEntries.forEach(entry => {
+    const region = entry.branch.region;
+    if (!regionalData[region]) {
+      regionalData[region] = { positive: 0, negative: 0, neutral: 0, total: 0 };
     }
+
+    const sentimentValues = Object.values(entry.sentiment);
+    const avgSentiment = sentimentValues.reduce((sum, val) => sum + val, 0) / sentimentValues.length;
     
-    const avgScore = regionFeedback.reduce((sum, f) => sum + f.satisfaction.overall, 0) / regionFeedback.length;
-    return {
-      name: regionName,
-      value: Math.round(avgScore * 10) / 10
-    };
+    if (avgSentiment > 0.2) regionalData[region].positive++;
+    else if (avgSentiment < -0.2) regionalData[region].negative++;
+    else regionalData[region].neutral++;
+    
+    regionalData[region].total++;
   });
+
+  return Object.entries(regionalData).map(([region, data]) => ({
+    region,
+    score: Math.round(((data.positive - data.negative) / data.total) * 100) / 100,
+    positive: data.positive,
+    negative: data.negative,
+    neutral: data.neutral
+  }));
 };
-
-// -------------------- CHANGED: return array for pie chart --------------------
-export type SentimentItem = { label: string; value: number; color: string };
-
-// ✅ ฟังก์ชันใหม่สำหรับกราฟ Pie (3 ค่า: เขียว/แดง/เทา)
-export const getSentimentDataForPie = (): SentimentItem[] => ([
-  { label: 'เชิงบวก', value: 68, color: '#10B981' },
-  { label: 'เชิงลบ', value: 27, color: '#EF4444' },
-  { label: 'ไม่มีนัยสำคัญ', value: 5,  color: '#6B7280' },
-]);
-
-// -----------------------------------------------------------------------------

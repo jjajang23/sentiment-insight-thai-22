@@ -1,11 +1,17 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, LineChart, Line } from 'recharts';
-import { useAnalytics } from '@/contexts/AnalyticsContext';
+import { UnifiedFilter } from '@/components/filters/UnifiedFilter';
+import { LocationFilters } from '@/types/locations';
 
 export const SatisfactionDetailPage: React.FC = () => {
-  const { state, setSelectedRegion } = useAnalytics();
+  const [locationFilters, setLocationFilters] = useState<LocationFilters>({
+    regionId: "all",
+    provinceId: "all",
+    districtId: "all",
+    branchId: "all"
+  });
 
   // Mock data for regional satisfaction
   const regionalData = Array.from({ length: 18 }, (_, i) => ({
@@ -25,16 +31,38 @@ export const SatisfactionDetailPage: React.FC = () => {
     count: Math.floor(Math.random() * 100) + 50,
   }));
 
+  const handleLocationFiltersChange = (filters: LocationFilters) => {
+    setLocationFilters(filters);
+  };
+
   const handleRegionClick = (data: any) => {
-    setSelectedRegion(data.name);
     console.log(`Selected region: ${data.name}`);
   };
 
   return (
     <div className="space-y-8">
-      <h2 className="text-xl font-semibold text-foreground">
-        วิเคราะห์เชิงลึก - หัวข้อการประเมินความพึงพอใจ
-      </h2>
+      <div className="flex flex-col space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">
+          วิเคราะห์เชิงลึก - หัวข้อการประเมินความพึงพอใจ
+        </h2>
+
+        {/* Location Filter */}
+        <UnifiedFilter
+          filters={locationFilters}
+          onFiltersChange={handleLocationFiltersChange}
+          options={{
+            showRegion: true,
+            showProvince: true,
+            showDistrict: true,
+            showBranch: true,
+            regionLabel: "ภาค",
+            provinceLabel: "จังหวัด",
+            districtLabel: "เขต",
+            branchLabel: "หน่วยให้บริการ"
+          }}
+          title="เลือกพื้นที่"
+        />
+      </div>
       
       {/* Regional Comparison */}
       <Card className="chart-container-large animate-fade-in">
