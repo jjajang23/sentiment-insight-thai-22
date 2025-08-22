@@ -9,7 +9,7 @@ import { LocationFilters } from '@/types/locations';
 
 // Generate mock data for bar chart based on selected filters
 const generateRegionalData = (locationFilters: LocationFilters) => {
-  if (locationFilters.regionId === "all") {
+  if (!locationFilters.regionId || locationFilters.regionId === "all") {
     // Show all regions
     return Array.from({ length: 18 }, (_, i) => ({
       region: `ภาค ${i + 1}`,
@@ -18,8 +18,9 @@ const generateRegionalData = (locationFilters: LocationFilters) => {
       neutral: Math.floor(Math.random() * 30) + 5
     }));
   } else {
-    // Show selected region only
-    const regionNumber = locationFilters.regionId.split('_')[1];
+    // Show selected region only - handle cases where regionId might not have the expected format
+    const regionParts = locationFilters.regionId.split('_');
+    const regionNumber = regionParts.length > 1 ? regionParts[1] : '1';
     return [{
       region: `ภาค ${regionNumber}`,
       positive: Math.floor(Math.random() * 100) + 50,
@@ -45,8 +46,9 @@ export const RegionalPage: React.FC = () => {
   };
 
   const getChartTitle = () => {
-    if (locationFilters.regionId !== "all") {
-      const regionNumber = locationFilters.regionId.split('_')[1];
+    if (locationFilters.regionId && locationFilters.regionId !== "all") {
+      const regionParts = locationFilters.regionId.split('_');
+      const regionNumber = regionParts.length > 1 ? regionParts[1] : '1';
       return `ข้อคิดเห็นลูกค้า - ภาค ${regionNumber}`;
     }
     return "ข้อคิดเห็นลูกค้า - ทุกภาค";
