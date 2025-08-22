@@ -3,12 +3,11 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Star, Search, Filter } from 'lucide-react';
 import { UnifiedFilter } from '@/components/filters/UnifiedFilter';
 import { LocationFilters } from '@/types/locations';
+import { generateLocationMockData } from '@/utils/locationDataManager';
 
 interface FeedbackItem {
   id: string;
@@ -31,14 +30,22 @@ const generateMockFeedback = (filters: LocationFilters): FeedbackItem[] => {
   const serviceTypes = ['การฝากเงิน/ถอนเงิน', 'การซื้อผลิตภัณฑ์', 'การชำระค่าบริการ/ค่าธรรมเนียม', 'อื่นๆ'];
   const sentiments: FeedbackItem['sentiment'][] = ['positive', 'negative', 'neutral'];
 
-  for (let i = 0; i < 25; i++) {
+  const locations = generateLocationMockData();
+  const filteredLocations = locations.filter(loc =>
+    (filters.regionId === 'all' || loc.region === filters.regionId) &&
+    (filters.provinceId === 'all' || loc.province === filters.provinceId) &&
+    (filters.districtId === 'all' || loc.district === filters.districtId) &&
+    (filters.branchId === 'all' || loc.branch === filters.branchId)
+  );
+
+  filteredLocations.forEach((loc, i) => {
     feedback.push({
       id: `feedback_${i + 1}`,
+      region: loc.region,
+      province: loc.province,
+      district: loc.district,
+      branch: loc.branch,
       customerName: `ลูกค้า ${i + 1}`,
-      branch: `หน่วยบริการ ${i + 1}`,
-      district: `เขต ${Math.floor(i / 5) + 1}`,
-      province: `จังหวัด ${Math.floor(i / 10) + 1}`,
-      region: `ภาค ${Math.floor(i / 15) + 1}`,
       serviceType: serviceTypes[i % serviceTypes.length],
       rating: Math.floor(Math.random() * 5) + 1,
       comment: `ความคิดเห็นตัวอย่างที่ ${i + 1} เกี่ยวกับการบริการที่ได้รับจากหน่วยบริการ`,
@@ -46,7 +53,7 @@ const generateMockFeedback = (filters: LocationFilters): FeedbackItem[] => {
       date: new Date(2024, 7, Math.floor(Math.random() * 30) + 1).toLocaleDateString('th-TH'),
       hasContact: Math.random() > 0.7
     });
-  }
+  });
 
   return feedback;
 };
@@ -110,7 +117,6 @@ export const CustomerFeedbackSystem: React.FC = () => {
   const sentimentCounts = {
     positive: feedbackData.filter(f => f.sentiment === 'positive').length,
     negative: feedbackData.filter(f => f.sentiment === 'negative').length,
-    neutral: feedbackData.filter(f => f.sentiment === 'neutral').length,
   };
 
   return (
@@ -132,7 +138,7 @@ export const CustomerFeedbackSystem: React.FC = () => {
             regionLabel: "ภาค",
             provinceLabel: "จังหวัด",
             districtLabel: "เขต",
-            branchLabel: "หน่วยให้บริการ"
+            branchLabel: "สาขา/หน่วยให้บริการ"
           }}
           title="เลือกพื้นที่"
         />
@@ -169,13 +175,6 @@ export const CustomerFeedbackSystem: React.FC = () => {
               onClick={() => setSelectedSentiment('negative')}
             >
               เชิงลบ ({sentimentCounts.negative})
-            </Button>
-            <Button
-              variant={selectedSentiment === 'neutral' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedSentiment('neutral')}
-            >
-              เป็นกลาง ({sentimentCounts.neutral})
             </Button>
           </div>
         </div>
@@ -216,18 +215,6 @@ export const CustomerFeedbackSystem: React.FC = () => {
             </p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">เป็นกลาง</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{sentimentCounts.neutral}</div>
-            <p className="text-xs text-muted-foreground">
-              {((sentimentCounts.neutral / feedbackData.length) * 100).toFixed(1)}%
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Feedback List */}
@@ -247,7 +234,7 @@ export const CustomerFeedbackSystem: React.FC = () => {
                     {feedback.customerName} - {feedback.branch}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {feedback.district}, {feedback.province}, {feedback.region}
+                    {feedback.region}, {feedback.province}, {feedback.district}, {feedback.branch}
                   </p>
                 </div>
                 <div className="flex gap-2">

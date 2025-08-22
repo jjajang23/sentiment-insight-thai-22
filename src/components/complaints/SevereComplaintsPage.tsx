@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertTriangle, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { UnifiedFilter } from '@/components/filters/UnifiedFilter';
 import { LocationFilters } from '@/types/locations';
+import { generateLocationMockData } from '@/utils/locationDataManager';
 
 interface SevereComplaint {
   id: string;
@@ -30,13 +31,23 @@ const generateMockComplaints = (filters: LocationFilters): SevereComplaint[] => 
   const statuses: SevereComplaint['status'][] = ['pending', 'investigating', 'resolved', 'closed'];
   const severities: SevereComplaint['severity'][] = ['high', 'critical'];
 
-  for (let i = 0; i < 15; i++) {
+  // กรอง locations ตามตัวกรอง
+  const locations = generateLocationMockData();
+  const filteredLocations = locations.filter (loc => 
+    (filters.regionId === 'all' || loc.region === filters.regionId) &&
+    (filters.provinceId === 'all' || loc.province === filters.provinceId) &&
+    (filters.districtId === 'all' || loc.district === filters.districtId) &&
+    (filters.branchId === 'all' || loc.branch === filters.branchId)
+  );
+
+  for (let i = 0; i < Math.min(15, filteredLocations.length); i++) {
+    const loc = filteredLocations[i];
     complaints.push({
       id: `complaint_${i + 1}`,
-      branch: `หน่วยบริการ ${i + 1}`,
-      district: `เขต ${Math.floor(i / 3) + 1}`,
-      province: `จังหวัด ${Math.floor(i / 6) + 1}`,
-      region: `ภาค ${Math.floor(i / 9) + 1}`,
+      branch: loc.branch,
+      district: loc.district,
+      province: loc.province,
+      region: loc.region,
       customerName: `ลูกค้า ${i + 1}`,
       complainType: complainTypes[i % complainTypes.length],
       description: `รายละเอียดการร้องเรียนที่ ${i + 1} เกี่ยวกับปัญหาในการให้บริการที่ไม่เหมาะสม`,
