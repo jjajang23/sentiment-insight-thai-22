@@ -1,4 +1,3 @@
-
 export interface Region {
   id: string;
   name: string;
@@ -29,6 +28,14 @@ export interface LocationData {
   branches: Branch[];
 }
 
+export interface LocationFilters {
+  regionId: string;
+  provinceId: string;
+  districtId: string;
+  branchId: string;
+}
+
+// Legacy compatibility - keep for backward compatibility
 export interface CascadingFilterOptions {
   showRegion?: boolean;
   showProvince?: boolean;
@@ -40,9 +47,5 @@ export interface CascadingFilterOptions {
   branchLabel?: string;
 }
 
-export interface LocationFilters {
-  regionId: string;
-  provinceId: string;
-  districtId: string;
-  branchId: string;
-}
+// New unified filter options interface
+export interface UnifiedFilterOptions extends CascadingFilterOptions {}

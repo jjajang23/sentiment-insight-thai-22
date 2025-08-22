@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import {
@@ -12,7 +13,7 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CascadingFilter } from "./filters/CascadingFilter";
+import { UnifiedFilter } from "./filters/UnifiedFilter";
 import { LocationFilters } from "@/types/locations";
 
 interface GlobalFiltersProps {
@@ -133,8 +134,9 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ onFiltersChange }) => {
 
   return (
     <div className="space-y-4">
-      {/* Location Filters */}
-      <CascadingFilter
+      {/* Location Filters - Using new UnifiedFilter */}
+      <UnifiedFilter
+        filters={filters.locationFilters}
         onFiltersChange={handleLocationFiltersChange}
         title="พื้นที่ให้บริการ"
       />
@@ -154,7 +156,7 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ onFiltersChange }) => {
                   }
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-64 p-3">
+              <PopoverContent className="w-64 p-3 bg-background border z-50">
                 <div className="space-y-2">
                   {serviceTypes.map((type) => (
                     <div key={type} className="flex items-center space-x-2">
@@ -189,7 +191,7 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ onFiltersChange }) => {
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="เลือกเดือน" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   {MONTHS.map((month) => (
                     <SelectItem key={month.value} value={month.value}>
                       {month.label}
@@ -201,7 +203,7 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ onFiltersChange }) => {
                 <SelectTrigger className="w-20">
                   <SelectValue placeholder="ปี" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   {Array.from({ length: 5 }, (_, i) => {
                     const year = new Date().getFullYear() - i;
                     const yearBE = year + 543;
@@ -223,7 +225,7 @@ const GlobalFilters: React.FC<GlobalFiltersProps> = ({ onFiltersChange }) => {
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="เลือกช่วงเวลา" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border z-50">
                 {timeRanges.map((range) => (
                   <SelectItem key={range.value} value={range.value}>
                     {range.label}

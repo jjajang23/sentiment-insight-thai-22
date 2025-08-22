@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { RegionalFeedbackModal } from '@/components/analytics/RegionalFeedbackModal';
-import { CascadingFilter } from '@/components/filters/CascadingFilter';
+import { UnifiedFilter } from '@/components/filters/UnifiedFilter';
 import { LocationFilters } from '@/types/locations';
 
 // Generate mock data for bar chart based on selected filters
@@ -12,7 +12,7 @@ const generateRegionalData = (locationFilters: LocationFilters) => {
   if (locationFilters.regionId === "all") {
     // Show all regions
     return Array.from({ length: 18 }, (_, i) => ({
-      region: `ภาคที่ ${i + 1}`,
+      region: `ภาค ${i + 1}`,
       positive: Math.floor(Math.random() * 100) + 50,
       negative: Math.floor(Math.random() * 50) + 10,
       neutral: Math.floor(Math.random() * 30) + 5
@@ -21,7 +21,7 @@ const generateRegionalData = (locationFilters: LocationFilters) => {
     // Show selected region only
     const regionNumber = locationFilters.regionId.split('_')[1];
     return [{
-      region: `ภาคที่ ${regionNumber}`,
+      region: `ภาค ${regionNumber}`,
       positive: Math.floor(Math.random() * 100) + 50,
       negative: Math.floor(Math.random() * 50) + 10,
       neutral: Math.floor(Math.random() * 30) + 5
@@ -47,7 +47,7 @@ export const RegionalPage: React.FC = () => {
   const getChartTitle = () => {
     if (locationFilters.regionId !== "all") {
       const regionNumber = locationFilters.regionId.split('_')[1];
-      return `ข้อคิดเห็นลูกค้า - ภาคที่ ${regionNumber}`;
+      return `ข้อคิดเห็นลูกค้า - ภาค ${regionNumber}`;
     }
     return "ข้อคิดเห็นลูกค้า - ทุกภาค";
   };
@@ -59,8 +59,10 @@ export const RegionalPage: React.FC = () => {
           กราฟข้อคิดเห็นลูกค้า รายพื้นที่
         </h1>
 
-        {/* Location Filter */}
-        <CascadingFilter
+        {/* Location Filter - Using new UnifiedFilter */}
+        <UnifiedFilter
+          filters={locationFilters}
+          onFiltersChange={handleLocationFiltersChange}
           options={{
             showRegion: true,
             showProvince: false,
@@ -68,7 +70,6 @@ export const RegionalPage: React.FC = () => {
             showBranch: false,
             regionLabel: "ภาค"
           }}
-          onFiltersChange={handleLocationFiltersChange}
           title="เลือกภาค"
         />
 

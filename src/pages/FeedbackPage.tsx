@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { ExportButton } from "@/components/shared/ExportButton";
 import { mockFeedbackData } from "@/data/mockData";
 import { FeedbackEntry } from "@/types/dashboard";
-import { CascadingFilter } from "@/components/filters/CascadingFilter";
+import { UnifiedFilter } from "@/components/filters/UnifiedFilter";
 import { LocationFilters } from "@/types/locations";
 
 type TimeFilterValue =
@@ -22,7 +22,7 @@ type TimeFilterValue =
 
 const THAI_MONTHS = [
   "มกราคม",
-  "กุมภาพันธ์",
+  "กุมภาพันธ์", 
   "มีนาคม",
   "เมษายน",
   "พฤษภาคม",
@@ -145,7 +145,7 @@ const TimeRangeFilter: React.FC<{
               <SelectTrigger>
                 <SelectValue placeholder="เลือกประเภทเวลา" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border z-50">
                 <SelectItem value="all">เลือกทั้งหมด</SelectItem>
                 <SelectItem value="monthly">ความคิดเห็นรายเดือน</SelectItem>
                 <SelectItem value="relative">ช่วงเวลาย้อนหลัง</SelectItem>
@@ -165,7 +165,7 @@ const TimeRangeFilter: React.FC<{
                   <SelectTrigger>
                     <SelectValue placeholder="เลือกเดือน" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background border z-50">
                     {months.map((m) => (
                       <SelectItem key={m.value} value={String(m.value)}>
                         {m.label}
@@ -184,7 +184,7 @@ const TimeRangeFilter: React.FC<{
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-background border z-50">
                     {[yearBE, yearBE - 1].map((yy) => (
                       <SelectItem key={yy} value={String(yy)}>
                         {yy}
@@ -206,7 +206,7 @@ const TimeRangeFilter: React.FC<{
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกระยะเวลา" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   {RELATIVE_CHOICES.map((c) => (
                     <SelectItem key={c.days} value={String(c.days)}>
                       {c.label}
@@ -249,7 +249,7 @@ export const FeedbackPage: React.FC = () => {
   const [locationFilters, setLocationFilters] = useState<LocationFilters>({
     regionId: "all",
     provinceId: "all",
-    districtId: "all", 
+    districtId: "all",
     branchId: "all"
   });
 
@@ -453,7 +453,8 @@ export const FeedbackPage: React.FC = () => {
 
       <TimeRangeFilter value={timeFilter} onChange={setTimeFilter} />
 
-      <CascadingFilter
+      <UnifiedFilter
+        filters={locationFilters}
         onFiltersChange={setLocationFilters}
         title="พื้นที่ให้บริการ"
       />
@@ -478,7 +479,7 @@ export const FeedbackPage: React.FC = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกหมวดหมู่หลัก" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   {mainCategories.map((category) => (
                     <SelectItem key={category.value} value={category.value}>
                       {category.label}
@@ -494,7 +495,7 @@ export const FeedbackPage: React.FC = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกหมวดหมู่ย่อย" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   {subCategories.map((category) => (
                     <SelectItem key={category.value} value={category.value}>
                       {category.label}
@@ -517,7 +518,7 @@ export const FeedbackPage: React.FC = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกประเภทบริการ" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   {serviceTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
@@ -538,7 +539,7 @@ export const FeedbackPage: React.FC = () => {
                 <SelectTrigger>
                   <SelectValue placeholder="เลือกทัศนคติ" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   <SelectItem value="all">ทั้งหมด</SelectItem>
                   <SelectItem value="positive">เชิงบวก</SelectItem>
                   <SelectItem value="negative">เชิงลบ</SelectItem>
