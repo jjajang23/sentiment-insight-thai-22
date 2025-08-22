@@ -190,6 +190,9 @@ generateMockDataWithLocations().then(data => {
 // Export functions to get mock data
 export const getMockFeedbackEntries = (): FeedbackEntry[] => mockFeedbackEntries;
 
+// Export as mockFeedbackData for backward compatibility
+export const mockFeedbackData = mockFeedbackEntries;
+
 export const getMockKPIData = (): KPIData => {
   const totalFeedback = mockFeedbackEntries.length;
   const feedbackWithComments = mockFeedbackEntries.filter(entry => entry.comment.length > 10);
@@ -210,10 +213,13 @@ export const getMockKPIData = (): KPIData => {
     },
     contactProvided: {
       count: contactProvided.length,
-      percentage: Math.round((contactProvided.length / totalFeedbook) * 100)
+      percentage: Math.round((contactProvided.length / totalFeedback) * 100)
     }
   };
 };
+
+// Export with alias for backward compatibility
+export const getKPIData = getMockKPIData;
 
 export const getMockServiceTypeData = (): ChartData[] => {
   const serviceTypes = {
@@ -235,6 +241,9 @@ export const getMockServiceTypeData = (): ChartData[] => {
   }));
 };
 
+// Export with alias for backward compatibility
+export const getServiceTypeData = getMockServiceTypeData;
+
 export const getMockSentimentData = (): SentimentItem[] => {
   let positive = 0, negative = 0, neutral = 0;
 
@@ -255,6 +264,9 @@ export const getMockSentimentData = (): SentimentItem[] => {
     { label: 'ไม่มีนัยสำคัญ', value: Math.round((neutral / total) * 100), color: '#6B7280' }
   ];
 };
+
+// Export with alias for backward compatibility
+export const getSentimentDataForPie = getMockSentimentData;
 
 export const getMockRegionalData = (): RegionData[] => {
   const regionalData: { [key: string]: { positive: number; negative: number; neutral: number; total: number } } = {};
@@ -281,5 +293,38 @@ export const getMockRegionalData = (): RegionData[] => {
     positive: data.positive,
     negative: data.negative,
     neutral: data.neutral
+  }));
+};
+
+// Add missing satisfaction data functions
+export const getSatisfactionData = () => {
+  const satisfactionScores = mockFeedbackEntries.map(entry => ({
+    overall: entry.satisfaction.overall,
+    care: entry.satisfaction.care,
+    consultation: entry.satisfaction.consultation,
+    speed: entry.satisfaction.speed,
+    accuracy: entry.satisfaction.accuracy,
+    equipment: entry.satisfaction.equipment,
+    environment: entry.satisfaction.environment
+  }));
+
+  return satisfactionScores;
+};
+
+export const getRegionSatisfactionData = () => {
+  const regionData: { [key: string]: number[] } = {};
+
+  mockFeedbackEntries.forEach(entry => {
+    const region = entry.branch.region;
+    if (!regionData[region]) {
+      regionData[region] = [];
+    }
+    regionData[region].push(entry.satisfaction.overall);
+  });
+
+  return Object.entries(regionData).map(([region, scores]) => ({
+    region,
+    avgSatisfaction: scores.reduce((sum, score) => sum + score, 0) / scores.length,
+    count: scores.length
   }));
 };
