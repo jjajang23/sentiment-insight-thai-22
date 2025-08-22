@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { LocationData, LocationFilters } from '@/types/locations';
-import { getLocationData } from '@/utils/csvDataLoader';
+import { getLocationData } from '@/utils/locationDataManager';
 
 export interface UseLocationDataReturn {
   locationData: LocationData | null;
